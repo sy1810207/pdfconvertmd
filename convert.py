@@ -121,13 +121,18 @@ def convert_pdf_mineru(pdf_path: str, output_dir: str | None = None) -> tuple[st
             return zip_path
 
         zip_path = asyncio.run(_run())
+        # Track existing markdown files so we can identify the file produced by this run.
+        existing_md_files = {f.resolve() for f in output_dir.rglob("*.md")}
         safe_extract_zip(zip_path, output_dir)
     finally:
         server.stop()
         shutil.rmtree(tmp_pdf_dir, ignore_errors=True)
 
-    # Find the generated markdown file and rename to original PDF stem
-    md_files = list(output_dir.rglob("*.md"))
+    # Find the generated markdown file from this run and rename to original PDF stem
+    md_files = [
+        f for f in output_dir.rglob("*.md")
+        if f.resolve() not in existing_md_files
+    ]
     if md_files:
         output_file = md_files[0]
         final_file = output_dir / (pdf_path.stem + ".md")
